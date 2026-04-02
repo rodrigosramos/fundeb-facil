@@ -4,10 +4,6 @@ Sistema Inteligente para Compreensão e Projeção de Complementações Orçamen
 """
 
 import os
-
-# Fix protobuf compatibility — DEVE vir antes de qualquer import que use gRPC/protobuf
-os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
-
 import streamlit as st
 import sqlite3
 import pandas as pd
