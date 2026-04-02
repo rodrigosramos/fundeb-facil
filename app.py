@@ -15,11 +15,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Importar agente conversacional (LangGraph)
+CHAT_ERRO = None
 try:
     from agents.graph import processar_mensagem
     CHAT_DISPONIVEL = True
-except Exception:
+except Exception as e:
     CHAT_DISPONIVEL = False
+    CHAT_ERRO = str(e)
 
 # Configuração da página
 st.set_page_config(
@@ -447,21 +449,33 @@ with tab3:
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            if CHAT_DISPONIVEL and (os.getenv("ANTHROPIC_API_KEY") or _has_streamlit_secret("ANTHROPIC_API_KEY")):
-                with st.spinner("Processando com IA..."):
-                    resultado_calc = st.session_state.get("resultado")
-                    resposta = processar_mensagem(
-                        mensagem=prompt,
-                        codigo_ibge=codigo_ibge,
-                        historico=st.session_state.messages[:-1],
-                        resultado_calculo=resultado_calc,
-                    )
-            else:
+            api_key = os.getenv("ANTHROPIC_API_KEY") or _has_streamlit_secret("ANTHROPIC_API_KEY")
+            if not CHAT_DISPONIVEL:
+                resposta = (
+                    "O módulo de IA não pôde ser carregado.\n\n"
+                    f"**Erro:** `{CHAT_ERRO}`\n\n"
+                    "Isso geralmente ocorre por falta de dependência no servidor. "
+                    "Consulte a aba **FAQ Educativo** para informações detalhadas."
+                )
+            elif not api_key:
                 resposta = (
                     "O assistente IA requer a chave `ANTHROPIC_API_KEY` para funcionar.\n\n"
-                    "Configure no arquivo `.env` (local) ou nos Secrets do Streamlit Cloud.\n\n"
+                    "Configure nos **Secrets** do Streamlit Cloud (Settings > Secrets):\n\n"
+                    '```toml\nANTHROPIC_API_KEY = "sk-ant-sua-chave-aqui"\n```\n\n'
                     "Enquanto isso, consulte a aba **FAQ Educativo** para informações detalhadas."
                 )
+            else:
+                with st.spinner("Processando com IA..."):
+                    try:
+                        resultado_calc = st.session_state.get("resultado")
+                        resposta = processar_mensagem(
+                            mensagem=prompt,
+                            codigo_ibge=codigo_ibge,
+                            historico=st.session_state.messages[:-1],
+                            resultado_calculo=resultado_calc,
+                        )
+                    except Exception as e:
+                        resposta = f"Erro ao processar mensagem: `{e}`"
             st.markdown(resposta)
             st.session_state.messages.append({"role": "assistant", "content": resposta})
 
